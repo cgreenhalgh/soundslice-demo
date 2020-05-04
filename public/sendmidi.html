@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Send midi test</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+<div>
+  <div>
+    <select id="midiout">
+      <option value="">(no MIDI></option>
+    </select>
+    <input type="button" value="start" onclick="handlestart()">
+
+  </div>
+</div>
+
+<script type="text/javascript">
+var midiout = document.getElementById("midiout");
+var midioutputs = {};
+
+function load() {
+  console.log("load event detected!");
+  navigator.requestMIDIAccess()
+  .then(function(access) {
+     // Get lists of available MIDI controllers
+     const outputs = access.outputs.values();
+     for (let output of outputs) {
+       console.log('MIDI output:', output);
+       var option = document.createElement("option");
+       option.text = output.name;
+       option.setAttribute('value', output.id);
+       midiout.add(option);
+       midioutputs[output.id] = output;
+     }
+  });
+}
+window.onload = load;
+
+function handlestart() {
+  // option - choice of midi?
+  
+  var midiid = midiout.options[midiout.selectedIndex].value;
+  if ( ! midiid ) {
+    alert('Please select MIDI output');
+    return;
+  }
+  console.log('use MIDI output '+midiid);
+  sendMiddleC( midiid );
+}
+// from https://www.w3.org/TR/webmidi/#sending-midi-messages-to-an-output-device
+function sendMiddleC( portID ) {
+  var noteOnMessage = [0x90, 60, 0x7f];    // note on, middle C, full velocity
+  var output = midioutputs[portID];
+  output.send( noteOnMessage );  //omitting the timestamp means send immediately.
+  output.send( [0x80, 60, 0x40], window.performance.now() + 1000.0 ); // Inlined array creation- note off, middle C,  
+                                                                      // release velocity = 64, timestamp = now + 1000ms.
+}
+</script>
+  </body>
+</html>
+

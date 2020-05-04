@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Soundslice test</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+<div>
+  <div>
+    <select id="midiin">
+      <option value="">(no MIDI>)</option>
+    </select>
+    <input type="button" value="start" onclick="handlestart()">
+    <input type="button" value="play (test)" onclick="handleplay()">
+
+  </div>
+  <div>
+    <!-- a slice I made to test with... -->
+    <iframe id="ssembed" src="https://www.soundslice.com/slices/rg5Vc/embed/?api=1" width="100%" height="500" frameBorder="0" allowfullscreen></iframe>
+  </div>
+</div>
+
+<script type="text/javascript">
+var ssiframe = document.getElementById('ssembed').contentWindow;
+var midiin = document.getElementById("midiin");
+var midiinputs = {};
+
+function load() {
+  console.log("load event detected!");
+  navigator.requestMIDIAccess()
+  .then(function(access) {
+     // Get lists of available MIDI controllers
+     const inputs = access.inputs.values();
+     for (let input of inputs) {
+       console.log('MIDI input:', input);
+       var option = document.createElement("option");
+       option.text = input.name;
+       option.setAttribute('value', input.id);
+       midiin.add(option);
+       midiinputs[input.id] = input;
+     }
+  });
+}
+window.onload = load;
+
+function handlestart() {
+  // option - choice of midi?
+  
+  var midiid = midiin.options[midiin.selectedIndex].value;
+  if ( ! midiid ) {
+    alert('Please select MIDI input');
+    return;
+  }
+  console.log('use MIDI input '+midiid);
+  midiinputs[midiid].onmidimessage = handleMidiMessage;
+}
+//from https://stackoverflow.com/questions/40902864/how-to-parse-web-midi-api-input-messages-onmidimessage
+/**
+ * Parse basic information out of a MIDI message.
+ */
+function parseMidiMessage(message) {
+  return {
+    command: message.data[0] >> 4,
+    channel: message.data[0] & 0xf,
+    note: message.data[1],
+    velocity: message.data[2] / 127
+  }
+}
+function handleMidiMessage(message) {
+
+  // Parse the MIDIMessageEvent.
+  const {command, channel, note, velocity} = parseMidiMessage(message)
+  console.log('midi message', message);
+  if (command === 9) {
+    // note on
+    console.log('Note '+note+' (velocity '+velocity+')');
+    if (note === 60) {
+      // C3...
+      handleplay();
+    }
+    // TODO...
+  }
+}
+
+function handleplay() {
+  console.log('play');
+  ssiframe.postMessage('{"method": "play"}', 'https://www.soundslice.com');
+}
+</script>
+  </body>
+</html>
+
